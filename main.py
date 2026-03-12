@@ -4,66 +4,52 @@ import time
 import random
 import re
 
-# Configuração da Página
-st.set_page_config(page_title="Minerador Pro - WhatsApp", page_icon="🚀")
+st.set_page_config(page_title="Minerador Pro - AntiBloqueio", page_icon="🛡️")
 
-st.title("🚀 Minerador de Grupos Profissional")
-st.write("Busca automática com filtros de redes sociais e exportação.")
+st.title("🛡️ Minerador Anti-Bloqueio")
+st.write("Busca inteligente com pausas humanas para evitar o erro 429.")
 
-# Interface de usuário
-fonte = st.selectbox("Escolha a rede social para minerar:", ("Facebook", "Instagram", "YouTube"))
-nicho = st.text_input("Qual o tema dos grupos? (Ex: Igreja, Marketing, Vendas)", "")
+fonte = st.selectbox("Onde minerar:", ("Facebook", "Instagram", "YouTube"))
+nicho = st.text_input("Tema do grupo:", "")
 
-if st.button("Iniciar Mineração"):
+if st.button("🚀 Iniciar Mineração Segura"):
     if nicho:
-        # Montagem automática da Query "Dork"
+        # A query agora usa aspas duplas de forma mais eficiente
         query = f'site:{fonte.lower()}.com "chat.whatsapp.com" "{nicho}"'
-        
-        # Regex para extrair apenas o link limpo do WhatsApp
-        regex_whatsapp = r"chat\.whatsapp\.com/[A-Za-z0-9]+"
         links_unicos = set()
-
-        with st.spinner(f'Garimpando links no {fonte}... Por favor, aguarde.'):
-            try:
-                # Busca configurada para evitar bloqueios (pausa de 2s entre resultados)
-                # Removemos o 'user_agent' que causava erro e usamos o padrão estável
-                resultados = search(query, num_results=20, lang="pt", sleep_interval=2)
+        
+        container = st.empty() # Espaço para mensagens de status
+        
+        try:
+            # Aumentamos o intervalo de sono (sleep_interval) para 5 segundos
+            # Isso é o que mais protege o seu IP
+            with st.spinner('Simulando comportamento humano... Aguarde.'):
+                busca = search(query, num_results=12, lang="pt", sleep_interval=5)
                 
-                for url in resultados:
-                    # Tenta encontrar o padrão do link do zap dentro da URL do Google
-                    match = re.search(regex_whatsapp, url)
+                for url in busca:
+                    # Regex para pegar apenas o link puro
+                    match = re.search(r"chat\.whatsapp\.com/[A-Za-z0-9]+", url)
                     if match:
-                        link_final = "https://" + match.group(0)
-                        links_unicos.add(link_final)
+                        links_unicos.add("https://" + match.group(0))
                     
-                    # Pausa extra aleatória para parecer um humano
-                    time.sleep(random.uniform(1, 3))
+                    # Pausa aleatória extra entre 3 e 7 segundos
+                    time.sleep(random.uniform(3, 7))
                 
                 if links_unicos:
-                    st.success(f"🎯 Sucesso! Encontrei {len(links_unicos)} grupos únicos.")
-                    
-                    # Botão para baixar a lista pronta para o seu computador
-                    lista_txt = "\n".join(links_unicos)
-                    st.download_button(
-                        label="📥 Baixar Lista para CRM (.txt)",
-                        data=lista_txt,
-                        file_name=f"leads_{nicho}_{fonte}.txt",
-                        mime="text/plain"
-                    )
-                    
-                    st.markdown("### Links Extraídos:")
+                    st.success(f"🎯 Captura concluída! {len(links_unicos)} grupos encontrados.")
+                    st.download_button("📥 Baixar Lista", "\n".join(links_unicos), "grupos.txt")
                     for l in links_unicos:
-                        st.code(l, language="text")
+                        st.code(l)
                 else:
-                    st.warning("Nenhum link direto encontrado nesta busca. Tente mudar o tema ou a rede social.")
+                    st.warning("O Google não retornou links. Tente mudar a Rede Social ou aguarde 10 min.")
                     
-            except Exception as e:
-                if "429" in str(e):
-                    st.error("⚠️ O Google bloqueou o acesso temporariamente. Aguarde 15 minutos ou use outra rede (Wi-Fi/4G).")
-                else:
-                    st.error(f"Ocorreu um ajuste necessário: {e}")
+        except Exception as e:
+            if "429" in str(e):
+                st.error("⚠️ O Google bloqueou este IP do servidor. SOLUÇÃO: Espere 15 min ou mude o termo da busca (ex: em vez de 'Igreja', use 'Católicos').")
+            else:
+                st.error(f"Erro: {e}")
     else:
-        st.error("Por favor, digite um tema antes de começar.")
+        st.error("Digite um tema.")
 
-st.divider()
-st.caption("Dica: Não faça mais de 5 buscas por hora para manter o seu IP seguro.")
+st.markdown("---")
+st.info("💡 **Dica de Especialista:** Se o bloqueio persistir, abra o seu buscador em uma **Aba Anônima** do navegador ou mude a sua conexão (de Wi-Fi para 4G do celular) por 2 minutos. Isso força o servidor a renovar a sessão.")
