@@ -4,81 +4,66 @@ import time
 import random
 import re
 
-# Configuração visual da página
-st.set_page_config(page_title="Minerador de Grupos Pro", page_icon="🚀", layout="centered")
+# Configuração da Página
+st.set_page_config(page_title="Minerador Pro - WhatsApp", page_icon="🚀")
 
-st.title("🚀 Extrator Inteligente de Grupos")
-st.write("Filtros avançados, limpeza de links e exportação para CRM.")
+st.title("🚀 Minerador de Grupos Profissional")
+st.write("Busca automática com filtros de redes sociais e exportação.")
 
-# 1. Filtro de Redes Sociais
-fonte = st.selectbox(
-    "Onde você quer procurar os grupos?",
-    ("Facebook", "Instagram", "YouTube", "Twitter")
-)
-
-nicho = st.text_input("Qual o tema do grupo? (Ex: Igreja, Vendas, Florianópolis)", "")
-
-# 2. Camuflagem: Lista de aparelhos para enganar o Google
-user_agents = [
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
-    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
-    "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
-]
+# Interface de usuário
+fonte = st.selectbox("Escolha a rede social para minerar:", ("Facebook", "Instagram", "YouTube"))
+nicho = st.text_input("Qual o tema dos grupos? (Ex: Igreja, Marketing, Vendas)", "")
 
 if st.button("Iniciar Mineração"):
     if nicho:
-        # Configurando o filtro do site selecionado
-        site_query = f"site:{fonte.lower()}.com"
-        query = f'{site_query} "chat.whatsapp.com" "{nicho}"'
+        # Montagem automática da Query "Dork"
+        query = f'site:{fonte.lower()}.com "chat.whatsapp.com" "{nicho}"'
         
-        # 3. Expressão Regular (Regex) para recortar SÓ o link do WhatsApp
+        # Regex para extrair apenas o link limpo do WhatsApp
         regex_whatsapp = r"chat\.whatsapp\.com/[A-Za-z0-9]+"
+        links_unicos = set()
 
-        # Usamos 'set' em vez de lista para ignorar links duplicados
-        links_limpos = set() 
-
-        with st.spinner(f'Buscando em {fonte}... Camuflando identidade... Isso pode levar 1 minuto.'):
+        with st.spinner(f'Garimpando links no {fonte}... Por favor, aguarde.'):
             try:
-                # Escolhe um aparelho aleatório para a busca
-                ua_escolhido = random.choice(user_agents)
-                
-                # Executa a busca
-                resultados = search(query, num_results=20, lang="pt", user_agent=ua_escolhido)
+                # Busca configurada para evitar bloqueios (pausa de 2s entre resultados)
+                # Removemos o 'user_agent' que causava erro e usamos o padrão estável
+                resultados = search(query, num_results=20, lang="pt", sleep_interval=2)
                 
                 for url in resultados:
-                    # Aplica o bisturi (Regex) no resultado do Google
+                    # Tenta encontrar o padrão do link do zap dentro da URL do Google
                     match = re.search(regex_whatsapp, url)
                     if match:
-                        links_limpos.add("https://" + match.group(0))
+                        link_final = "https://" + match.group(0)
+                        links_unicos.add(link_final)
                     
-                    # Pausa humana (essencial para evitar o bloqueio de IP)
-                    time.sleep(random.uniform(2.5, 5.5))
+                    # Pausa extra aleatória para parecer um humano
+                    time.sleep(random.uniform(1, 3))
                 
-                if links_limpos:
-                    st.success(f"🎯 Captura concluída! {len(links_limpos)} grupos únicos encontrados.")
+                if links_unicos:
+                    st.success(f"🎯 Sucesso! Encontrei {len(links_unicos)} grupos únicos.")
                     
-                    # 4. Prepara o arquivo .txt para exportação
-                    texto_exportacao = "\n".join(links_limpos)
-                    
+                    # Botão para baixar a lista pronta para o seu computador
+                    lista_txt = "\n".join(links_unicos)
                     st.download_button(
-                        label="📥 Baixar Lista Limpa (.txt)",
-                        data=texto_exportacao,
-                        file_name=f"grupos_{fonte.lower()}_{nicho.replace(' ', '_')}.txt",
+                        label="📥 Baixar Lista para CRM (.txt)",
+                        data=lista_txt,
+                        file_name=f"leads_{nicho}_{fonte}.txt",
                         mime="text/plain"
                     )
                     
-                    st.markdown("### Links Encontrados:")
-                    for link in links_limpos:
-                        # Exibe em formato de código para facilitar a cópia
-                        st.code(link, language="text")
+                    st.markdown("### Links Extraídos:")
+                    for l in links_unicos:
+                        st.code(l, language="text")
                 else:
-                    st.warning("Nenhum link foi encontrado. Tente trocar a rede social ou o termo.")
+                    st.warning("Nenhum link direto encontrado nesta busca. Tente mudar o tema ou a rede social.")
                     
             except Exception as e:
                 if "429" in str(e):
-                    st.error("⚠️ O Google percebeu a automação. Aguarde 15 minutos ou troque de rede Wi-Fi/4G.")
+                    st.error("⚠️ O Google bloqueou o acesso temporariamente. Aguarde 15 minutos ou use outra rede (Wi-Fi/4G).")
                 else:
-                    st.error(f"Erro inesperado: {e}")
+                    st.error(f"Ocorreu um ajuste necessário: {e}")
     else:
-        st.error("Digite o nicho para começar.")
+        st.error("Por favor, digite um tema antes de começar.")
+
+st.divider()
+st.caption("Dica: Não faça mais de 5 buscas por hora para manter o seu IP seguro.")
