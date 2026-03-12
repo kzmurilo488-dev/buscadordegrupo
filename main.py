@@ -1,54 +1,84 @@
 import streamlit as st
-import requests
-from bs4 import BeautifulSoup
 from googlesearch import search
 import time
+import random
+import re
 
-st.set_page_config(page_title="Buscador de Grupos Premium", page_icon="🎯", layout="centered")
-st.title("🎯 Extrator de Grupos Segmentados")
-st.markdown("Busca inteligente focada em nichos específicos (ex: Religião, Negócios, etc).")
+# Configuração visual da página
+st.set_page_config(page_title="Minerador de Grupos Pro", page_icon="🚀", layout="centered")
 
-nicho = st.text_input("Qual o nicho exato?", placeholder="Ex: Grupo de Jovens da Igreja")
-num_links = st.slider("Profundidade da busca (links)", 10, 50, 20)
-botao = st.button("GERAR LISTA SEGMENTADA")
+st.title("🚀 Extrator Inteligente de Grupos")
+st.write("Filtros avançados, limpeza de links e exportação para CRM.")
 
-def validar_link(url):
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'}
-        response = requests.get(url, headers=headers, timeout=8)
-        if response.status_code == 200 and "chat.whatsapp.com" in url:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            nome_elemento = soup.find('h3')
-            if nome_elemento and "WhatsApp Group Invite" not in nome_elemento.text:
-                return nome_elemento.text.strip()
-        return None
-    except:
-        return None
+# 1. Filtro de Redes Sociais
+fonte = st.selectbox(
+    "Onde você quer procurar os grupos?",
+    ("Facebook", "Instagram", "YouTube", "Twitter")
+)
 
-if botao and nicho:
-    with st.spinner(f'Filtrando resultados para: {nicho}...'):
-        # BUSCA INTELIGENTE: Inclui o nicho e exclui termos comerciais ou irrelevantes
-        # Exemplo: busca por igreja mas ignora OLX, Mercado Livre e notícias genéricas
-        query = f'site:facebook.com "chat.whatsapp.com" "{nicho}" -venda -comprar -notícia -olx -loja'
+nicho = st.text_input("Qual o tema do grupo? (Ex: Igreja, Vendas, Florianópolis)", "")
+
+# 2. Camuflagem: Lista de aparelhos para enganar o Google
+user_agents = [
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 16_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.5 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 13; SM-S918B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+]
+
+if st.button("Iniciar Mineração"):
+    if nicho:
+        # Configurando o filtro do site selecionado
+        site_query = f"site:{fonte.lower()}.com"
+        query = f'{site_query} "chat.whatsapp.com" "{nicho}"'
         
-        resultados_finais = []
-        try:
-            for url in search(query, num_results=num_links):
-                if "chat.whatsapp.com" in url:
-                    nome = validar_link(url)
-                    # Validação extra: O nome do grupo deve conter palavras do nicho para ser exibido
-                    if nome and any(word.lower() in nome.lower() for word in nicho.split()):
-                        resultados_finais.append({"Grupo": nome, "Link": url})
-                    time.sleep(1.8)
-            
-            if resultados_finais:
-                st.success(f"Encontrei {len(resultados_finais)} grupos altamente segmentados!")
-                for item in resultados_finais:
-                    with st.container():
-                        st.markdown(f"### ⛪ {item['Grupo']}")
-                        st.link_button("ENTRAR AGORA", item['Link'])
-                        st.divider()
-            else:
-                st.warning("Nenhum grupo específico encontrado. Tente um termo mais direto.")
-        except Exception:
-            st.error("O Google detectou muitas requisições. Tente novamente em alguns minutos.")
+        # 3. Expressão Regular (Regex) para recortar SÓ o link do WhatsApp
+        regex_whatsapp = r"chat\.whatsapp\.com/[A-Za-z0-9]+"
+
+        # Usamos 'set' em vez de lista para ignorar links duplicados
+        links_limpos = set() 
+
+        with st.spinner(f'Buscando em {fonte}... Camuflando identidade... Isso pode levar 1 minuto.'):
+            try:
+                # Escolhe um aparelho aleatório para a busca
+                ua_escolhido = random.choice(user_agents)
+                
+                # Executa a busca
+                resultados = search(query, num_results=20, lang="pt", user_agent=ua_escolhido)
+                
+                for url in resultados:
+                    # Aplica o bisturi (Regex) no resultado do Google
+                    match = re.search(regex_whatsapp, url)
+                    if match:
+                        links_limpos.add("https://" + match.group(0))
+                    
+                    # Pausa humana (essencial para evitar o bloqueio de IP)
+                    time.sleep(random.uniform(2.5, 5.5))
+                
+                if links_limpos:
+                    st.success(f"🎯 Captura concluída! {len(links_limpos)} grupos únicos encontrados.")
+                    
+                    # 4. Prepara o arquivo .txt para exportação
+                    texto_exportacao = "\n".join(links_limpos)
+                    
+                    st.download_button(
+                        label="📥 Baixar Lista Limpa (.txt)",
+                        data=texto_exportacao,
+                        file_name=f"grupos_{fonte.lower()}_{nicho.replace(' ', '_')}.txt",
+                        mime="text/plain"
+                    )
+                    
+                    st.markdown("### Links Encontrados:")
+                    for link in links_limpos:
+                        # Exibe em formato de código para facilitar a cópia
+                        st.code(link, language="text")
+                else:
+                    st.warning("Nenhum link foi encontrado. Tente trocar a rede social ou o termo.")
+                    
+            except Exception as e:
+                if "429" in str(e):
+                    st.error("⚠️ O Google percebeu a automação. Aguarde 15 minutos ou troque de rede Wi-Fi/4G.")
+                else:
+                    st.error(f"Erro inesperado: {e}")
+    else:
+        st.error("Digite o nicho para começar.")
