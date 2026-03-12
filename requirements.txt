@@ -1,2 +1,3 @@
-googlesearch-python
 streamlit
+requests
+beautifulsoup4
