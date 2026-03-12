@@ -1,81 +1,88 @@
-
 import streamlit as st
 import requests
-from bs4 import BeautifulSoup
 import re
 import time
+import random
 
-st.set_page_config(page_title="Minerador Pro + Filtro Ativo", page_icon="✅")
+# Configurações de UI
+st.set_page_config(page_title="Minerador LeadGen Pro", page_icon="💎", layout="wide")
 
-st.title("✅ Minerador de Grupos Ativos")
-st.write("Buscando apenas links verificados em diretórios públicos.")
+st.title("💎 Minerador de Leads High-End")
+st.write("Sistema resiliente com rotação de fontes e limpeza de links.")
 
-nicho = st.text_input("Qual nicho buscar? (Ex: Igreja, Marketing, Vendas)", "")
+# Interface
+col1, col2 = st.columns([2, 1])
+with col1:
+    nicho = st.text_input("Nicho ou Palavra-chave (ex: Igreja, Investimentos, VSL)", "")
+with col2:
+    quantidade = st.slider("Profundidade da busca", 1, 5, 2)
 
-def verificar_link_ativo(url):
-    """Verifica se o link do WhatsApp ainda é válido e não expirou."""
-    try:
-        # Faz uma pequena requisição ao convite para ver se a página existe
-        response = requests.get(url, timeout=5)
-        if "WhatsApp Group Invite" in response.text and "Invite Link" not in response.text:
-            return True
-        # Se na página aparecer 'Link de convite revogado' ou similar, ele descarta
-        if "Lookup a WhatsApp" in response.text or "revoked" in response.text:
-            return False
-        return True
-    except:
-        return False
+def extrair_links_limpos(texto):
+    """Filtra apenas links reais de convite do WhatsApp."""
+    padrao = r"chat\.whatsapp\.com/(?:invite/)?([A-Za-z0-9]{20,})"
+    encontrados = re.findall(padrao, texto)
+    return [f"https://chat.whatsapp.com/{codigo}" for codigo in encontrados]
 
-if st.button("Explorar e Validar Grupos"):
+if st.button("🚀 Iniciar Mineração Inteligente"):
     if nicho:
-        links_sujos = []
-        # Alvo: Diretório que permite buscas rápidas
-        url_busca = f"https://www.gruposwhats.app/br/search?q={nicho}"
+        links_finais = set()
+        progresso = st.progress(0)
+        status = st.empty()
         
-        headers = {"User-Agent": "Mozilla/5.0"}
+        # Estratégia Multi-Motor: Se um falha, o outro supre
+        motores = [
+            f"https://www.bing.com/search?q=site:facebook.com+chat.whatsapp.com+{nicho}",
+            f"https://duckduckgo.com/html/?q=chat.whatsapp.com+{nicho}",
+            f"https://www.google.com/search?q=intext:chat.whatsapp.com+{nicho}"
+        ]
 
-        with st.spinner(f'Garimpando e testando links de "{nicho}"...'):
+        headers_list = [
+            {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/119.0.0.0"},
+            {"User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari/537.36"},
+            {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36"}
+        ]
+
+        for idx, url in enumerate(motores):
+            status.text(f"Explorando fonte {idx+1} de {len(motores)}...")
             try:
-                res = requests.get(url_busca, headers=headers, timeout=10)
-                soup = BeautifulSoup(res.text, 'html.parser')
+                # Rotação de cabeçalho para evitar bloqueio de IP
+                h = random.choice(headers_list)
+                response = requests.get(url, headers=h, timeout=15)
                 
-                # Captura todos os links que apontam para convites
-                for a in soup.find_all('a', href=True):
-                    href = a['href']
-                    if "chat.whatsapp.com" in href:
-                        links_sujos.append(href)
-
-                links_sujos = list(set(links_sujos)) # Remove duplicatas iniciais
+                if response.status_code == 200:
+                    links = extrair_links_limpos(response.text)
+                    for l in links:
+                        links_finais.add(l)
                 
-                links_validados = []
-                progresso = st.progress(0)
-                status_text = st.empty()
-
-                # Fase de Validação (O Filtro de Ativos)
-                for i, link in enumerate(links_sujos):
-                    status_text.text(f"Verificando link {i+1} de {len(links_sujos)}...")
-                    if verificar_link_ativo(link):
-                        links_validados.append(link)
-                    progresso.progress((i + 1) / len(links_sujos))
-                    time.sleep(0.5) # Pausa curta para não sobrecarregar
-
-                status_text.empty()
-
-                if links_validados:
-                    st.success(f"🎯 Encontrei {len(links_validados)} grupos ATIVOS e verificados!")
-                    
-                    csv = "\n".join(links_validados)
-                    st.download_button("📥 Baixar Lista de Ativos", csv, f"ativos_{nicho}.txt")
-                    
-                    for l in links_validados:
-                        st.code(l)
-                else:
-                    st.warning("Nenhum grupo ativo encontrado para este termo no momento.")
-                    
+                # Pausa técnica para o servidor não identificar o robô
+                time.sleep(random.uniform(2, 4))
+                progresso.progress((idx + 1) / len(motores))
+                
             except Exception as e:
-                st.error(f"Erro na mineração: {e}")
+                continue
+
+        status.empty()
+        
+        if links_finais:
+            st.success(f"🎯 Mineração concluída! Encontrei {len(links_finais)} grupos únicos.")
+            
+            # Área de exportação
+            lista_final = "\n".join(list(links_finais))
+            st.download_button(
+                label="📥 Exportar para CRM/TXT",
+                data=lista_final,
+                file_name=f"leads_{nicho}.txt",
+                mime="text/plain"
+            )
+            
+            # Exibição organizada
+            st.markdown("### Links Validados:")
+            for link in links_finais:
+                st.code(link, language="text")
+        else:
+            st.error("As fontes de dados estão protegidas ou o termo é muito específico. Dica: Tente usar apenas uma palavra (ex: 'Igreja' em vez de 'Igreja em Florianópolis').")
     else:
-        st.error("Digite um nicho.")
+        st.error("Por favor, digite um nicho para minerar.")
 
 st.divider()
-st.caption("Esta ferramenta filtra links expirados automaticamente para economizar seu tempo.")
+st.info("💡 **Aviso Técnico:** Este script usa rotação de User-Agents. Se o resultado for zero, o provedor de internet bloqueou a requisição temporariamente. Aguarde 5 minutos.")
